@@ -1,0 +1,42 @@
+# Secrets and local configuration
+.env
+.env.local
+*.env
+!.env.example
+
+# Local LLM weights (multiple GB)
+models/
+*.gguf
+
+# Go build output
+backend/server
+backend/bin/
+backend/tmp/
+*.exe
+*.test
+*.out
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+npm-debug.log*
+
+# Editors, agents and OS
+.idea/
+.vscode/
+.claude/
+.DS_Store
+Thumbs.db
+
+# Working notes kept out of the public repository: planning logs, the original
+# specification and the research write-up stay here locally.
+docs/internal/
+
+# Scratch
+tmp/
+*.log
+
+# TypeScript build cache
+frontend/tsconfig.tsbuildinfo

@@ -1,0 +1,16 @@
+Crypto Market Advisor
+Copyright 2026 Crypto Market Advisor contributors
+
+This product includes software developed by the Crypto Market Advisor
+contributors, licensed under the Apache License, Version 2.0.
+
+This software is an analytical tool. It does not execute trades, does not
+connect to exchange accounts, and its output is not financial advice.
+
+Third-party dependencies retain their own licenses. Go module licenses are
+listed in backend/go.mod and resolved by the Go toolchain; frontend package
+licenses are listed in frontend/package.json and frontend/package-lock.json.
+
+Market data is retrieved from public endpoints of Bybit and CoinGecko, and news
+from publicly published RSS/Atom feeds. Their terms of use apply to that data
+and are the operator's responsibility.

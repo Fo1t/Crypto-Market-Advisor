@@ -1,0 +1,56 @@
+name: Bug report
+description: Something behaves differently from what the documentation says
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not paste the contents of your `.env` — it holds credentials.
+        Redact values before sharing any configuration.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what happened, and what you expected instead.
+      placeholder: |
+        1. Started a technical backtest on BTC 1h ...
+        2. The run finished with 0 trades ...
+        3. I expected trades, because ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: "`docker compose logs backend | tail -50`, and the browser console for UI issues."
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Commit hash or release tag.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: llm
+    attributes:
+      label: LLM setup
+      options:
+        - Bundled llama.cpp (--profile llm)
+        - Separate OpenAI-compatible server
+        - No model at all
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Docker version, GPU if relevant.
+      placeholder: Ubuntu 24.04, Docker 27.3, RTX 4070
+    validations:
+      required: true

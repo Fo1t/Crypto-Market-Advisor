@@ -1,0 +1,149 @@
+# A fixed project name keeps container, network and volume names identical on
+# every machine, instead of following whatever directory the repository was
+# cloned into. Everything documented as crypto-market-advisor_* is then true.
+name: crypto-market-advisor
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-advisor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-advisor}
+      POSTGRES_DB: ${POSTGRES_DB:-advisor}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-advisor} -d ${POSTGRES_DB:-advisor}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-advisor}:${POSTGRES_PASSWORD:-advisor}@postgres:5432/${POSTGRES_DB:-advisor}?sslmode=disable
+      HTTP_PORT: 8080
+      APP_ENV: ${APP_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+
+      COINGECKO_BASE_URL: ${COINGECKO_BASE_URL:-https://api.coingecko.com/api/v3}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
+      COINGECKO_API_KEY_HEADER: ${COINGECKO_API_KEY_HEADER:-x-cg-demo-api-key}
+      COINGECKO_RATE_LIMIT_RPM: ${COINGECKO_RATE_LIMIT_RPM:-25}
+      MARKET_UNIVERSE_SIZE: ${MARKET_UNIVERSE_SIZE:-20}
+
+      BYBIT_MARKET_DATA_ENABLED: ${BYBIT_MARKET_DATA_ENABLED:-true}
+      BYBIT_MARKET_BASE_URL: ${BYBIT_MARKET_BASE_URL:-https://api.bybit.com}
+      BYBIT_MARKET_TIMEOUT: ${BYBIT_MARKET_TIMEOUT:-15s}
+      BYBIT_MARKET_MAX_RETRIES: ${BYBIT_MARKET_MAX_RETRIES:-2}
+      BYBIT_MARKET_RETRY_BASE_WAIT: ${BYBIT_MARKET_RETRY_BASE_WAIT:-1s}
+      BYBIT_MARKET_RATE_LIMIT_RPM: ${BYBIT_MARKET_RATE_LIMIT_RPM:-300}
+
+      NEWS_ENABLED: ${NEWS_ENABLED:-true}
+      NEWS_FETCH_INTERVAL: ${NEWS_FETCH_INTERVAL:-5m}
+      NEWS_FETCH_CONCURRENCY: ${NEWS_FETCH_CONCURRENCY:-4}
+      NEWS_HTTP_TIMEOUT: ${NEWS_HTTP_TIMEOUT:-15s}
+      NEWS_MAX_RETRIES: ${NEWS_MAX_RETRIES:-2}
+      NEWS_RETRY_BASE_WAIT: ${NEWS_RETRY_BASE_WAIT:-1s}
+      NEWS_MAX_RESPONSE_BYTES: ${NEWS_MAX_RESPONSE_BYTES:-2097152}
+      NEWS_ALLOW_PRIVATE_FEEDS: ${NEWS_ALLOW_PRIVATE_FEEDS:-false}
+      NEWS_LLM_LOOKBACK: ${NEWS_LLM_LOOKBACK:-24h}
+      NEWS_LLM_MAX_ASSET_ITEMS: ${NEWS_LLM_MAX_ASSET_ITEMS:-8}
+      NEWS_LLM_MAX_GLOBAL_ITEMS: ${NEWS_LLM_MAX_GLOBAL_ITEMS:-5}
+      NEWS_CLUSTER_TIME_WINDOW: ${NEWS_CLUSTER_TIME_WINDOW:-6h}
+      NEWS_TITLE_SIMILARITY_THRESHOLD: ${NEWS_TITLE_SIMILARITY_THRESHOLD:-0.72}
+      NEWS_HISTORY_MIN_SAMPLE_SIZE: ${NEWS_HISTORY_MIN_SAMPLE_SIZE:-20}
+      NEWS_REACTION_INTERVAL: ${NEWS_REACTION_INTERVAL:-5m}
+      NEWS_REACTION_BASELINE_GRACE: ${NEWS_REACTION_BASELINE_GRACE:-2h}
+      NEWS_BYBIT_ENABLED: ${NEWS_BYBIT_ENABLED:-true}
+      NEWS_GDELT_ENABLED: ${NEWS_GDELT_ENABLED:-false}
+
+      ANALYSIS_INTERVAL: ${ANALYSIS_INTERVAL:-5m}
+      ANALYSIS_TIMEFRAMES: ${ANALYSIS_TIMEFRAMES:-1m,5m,15m,1h,4h,1d}
+      ANALYSIS_ENABLED: ${ANALYSIS_ENABLED:-true}
+      ANALYSIS_MAX_CONCURRENT_SYMBOLS: ${ANALYSIS_MAX_CONCURRENT_SYMBOLS:-4}
+
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://llm:8080/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-Qwen3-8B}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-180s}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.2}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-1800}
+      LLM_CONTEXT_SIZE: ${LLM_CONTEXT_SIZE:-16384}
+      LLM_MAX_CONCURRENT_REQUESTS: ${LLM_MAX_CONCURRENT_REQUESTS:-1}
+      LLM_ENABLED: ${LLM_ENABLED:-true}
+
+      RISK_MIN_LEVERAGE: ${RISK_MIN_LEVERAGE:-5}
+      RISK_MAX_LEVERAGE: ${RISK_MAX_LEVERAGE:-50}
+      RISK_CRITICAL_NEWS_MAX_LEVERAGE: ${RISK_CRITICAL_NEWS_MAX_LEVERAGE:-15}
+      RISK_CRITICAL_NEWS_HIGH_VOL_MAX_LEVERAGE: ${RISK_CRITICAL_NEWS_HIGH_VOL_MAX_LEVERAGE:-8}
+      RISK_CRITICAL_NEWS_MAX_AGE: ${RISK_CRITICAL_NEWS_MAX_AGE:-2h}
+      MAX_RECOMMENDED_ALLOCATION_PCT: ${MAX_RECOMMENDED_ALLOCATION_PCT:-15}
+
+      # Fees are intentionally empty by default: the application never invents
+      # exchange fee rates. Fill them in from your own Bybit fee schedule.
+      DEFAULT_MAKER_FEE_PCT: ${DEFAULT_MAKER_FEE_PCT:-}
+      DEFAULT_TAKER_FEE_PCT: ${DEFAULT_TAKER_FEE_PCT:-}
+      DEFAULT_SLIPPAGE_PCT: ${DEFAULT_SLIPPAGE_PCT:-0.02}
+
+      BACKTEST_MAX_INFERENCES: ${BACKTEST_MAX_INFERENCES:-2000}
+      BACKTEST_DEFAULT_FUNDING_RATE_PCT: ${BACKTEST_DEFAULT_FUNDING_RATE_PCT:-0}
+      BACKTEST_DEFAULT_MAINTENANCE_MARGIN_PCT: ${BACKTEST_DEFAULT_MAINTENANCE_MARGIN_PCT:-0}
+      BACKTEST_DEFAULT_MAX_OPEN_POSITIONS: ${BACKTEST_DEFAULT_MAX_OPEN_POSITIONS:-1}
+
+      # Settings edited in the UI are stored in the database and win over these
+      # variables; set this to true for one start to re-seed them from .env.
+      SETTINGS_FROM_ENV: ${SETTINGS_FROM_ENV:-false}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    extra_hosts:
+      # Lets LLM_BASE_URL point at an inference server running on the host OS,
+      # e.g. http://host.docker.internal:8080/v1
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+
+  llm:
+    profiles: ["llm"]
+    image: ${LLM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda}
+    restart: unless-stopped
+    command: >
+      -m /models/${LLM_MODEL_FILE:-model.gguf}
+      --host 0.0.0.0 --port 8080
+      --ctx-size ${LLM_CONTEXT_SIZE:-16384}
+      --parallel ${LLM_MAX_CONCURRENT_REQUESTS:-1}
+      --n-gpu-layers ${LLM_GPU_LAYERS:-999}
+      --alias ${LLM_MODEL:-not-configured}
+      --reasoning ${LLM_REASONING:-off}
+    volumes:
+      - ${LLM_MODEL_DIR:-./models}:/models:ro
+    ports:
+      - "${LLM_PORT:-8081}:8080"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  postgres_data:

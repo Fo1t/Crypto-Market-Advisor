@@ -1,0 +1,46 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - gocritic
+    - misspell
+    - nilerr
+    - revive
+    - unconvert
+    - unparam
+    - wastedassign
+
+  settings:
+    errcheck:
+      # Deliberate best-effort calls (status writes, rollbacks) are marked with
+      # an explicit blank assignment in the code.
+      check-blank: false
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+
+  exclusions:
+    rules:
+      # Tests may use long functions and magic numbers; that is the point of a
+      # table-driven fixture.
+      - path: _test\.go
+        linters:
+          - unparam
+          - gocritic
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

@@ -1,0 +1,2 @@
+ALTER TABLE recommendations
+    ADD COLUMN IF NOT EXISTS translations JSONB NOT NULL DEFAULT '{}'::JSONB;

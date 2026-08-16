@@ -1,0 +1,9 @@
+.git
+.env
+models/
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+backend/bin/
+**/*.test
+**/*.log

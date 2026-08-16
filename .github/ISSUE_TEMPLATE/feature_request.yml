@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a change to what the application does
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Proposals that add order placement, private exchange keys or account access are out of
+        scope by design — see the non-negotiables in CONTRIBUTING.md.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is hard or impossible today? Describe the situation, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: What should happen instead, and where in the application would it live?
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence, if this is about trading performance
+      description: |
+        For a new strategy, filter, exit rule or weight change: which assets and periods you tested,
+        how many trades, and what the control was. `cmd/lab` produces exactly this.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
