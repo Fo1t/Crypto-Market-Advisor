@@ -51,6 +51,23 @@
 
 ---
 
+## 界面截图
+
+<div align="center">
+
+![单个资产的分析：K线、市场状态、规则结论与确定性评分](docs/images/market-analysis.png)
+
+*单个资产：带识别关口的K线、市场状态、确定性策略的结论及其背后的每一票，以及确定性评分——与此同时
+顶部如实标明模型离线，缺席期间不会编造任何东西。*
+
+![新闻流：跨来源聚类的事件，带类别、重要性与来源数](docs/images/news-feed.png)
+
+*新闻流：跨来源聚类后的事件，每条都带类别、重要性与来源数量。标题保持原文语言，界面与分析结果本地化。*
+
+</div>
+
+---
+
 ## 核心特性
 
 | | |
@@ -144,6 +161,8 @@ RISK_PER_TRADE_PCT=0.75
 |---|---|
 | [docs/configuration.md](docs/configuration.md) | 全部环境变量、设置优先级、手续费、本地大模型及其上下文预算。 |
 | [docs/architecture.md](docs/architecture.md) | 模块结构、值得了解的设计取舍，以及 REST API。 |
+| [docs/data-sources.zh-CN.md](docs/data-sources.zh-CN.md) | 逐个接口说明向 Bybit 与 CoinGecko 究竟索取了什么：职责划分、分页与缓存、补齐时间窗、手动历史导入，以及数据源不可用时会发生什么。 |
+| [docs/algorithms.zh-CN.md](docs/algorithms.zh-CN.md) | 从一根K线到一条建议之间全部算法的概览：指标、形态、市场结构、支撑阻力、背离、市场状态、投票、风险引擎与结果判定。 |
 | [docs/strategies.md](docs/strategies.md) | 确定性策略体系：策略、过滤器、硬否决、内置组合，以及默认值背后的实测数据。 |
 | [docs/backtesting.md](docs/backtesting.md) | 两种回测模式、撮合模型、无未来函数的保证，以及离线研究工具。 |
 | [docs/development.md](docs/development.md) | 构建、测试、静态检查、集成测试与数据库迁移。 |

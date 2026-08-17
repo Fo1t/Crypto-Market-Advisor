@@ -9,6 +9,7 @@ import type {
   Dashboard,
   EquityPoint,
   Health,
+  ImportProgress,
   Market,
   NewsCluster,
   NewsSource,
@@ -101,6 +102,11 @@ export const api = {
   ) => request<Market>(`/markets/${symbol}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteMarket: (symbol: string) => request<void>(`/markets/${symbol}`, { method: 'DELETE' }),
   refreshUniverse: () => request<{ status: string }>('/markets/refresh', { method: 'POST' }),
+
+  importHistory: (payload: { symbols: string[]; timeframes: string[]; from: string; to: string }) =>
+    request<ImportProgress>('/markets/import', { method: 'POST', body: JSON.stringify(payload) }),
+  importStatus: () => request<ImportProgress>('/markets/import'),
+  cancelImport: () => request<ImportProgress>('/markets/import/cancel', { method: 'POST' }),
 
   analysis: (symbol: string) => request<AnalysisResponse>(`/markets/${symbol}/analysis`),
   candles: (symbol: string, timeframe: string, limit = 10_000, window?: { from: string; to: string }) =>

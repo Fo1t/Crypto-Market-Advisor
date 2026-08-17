@@ -9,6 +9,9 @@ export type Freshness = 'fresh' | 'stale' | 'incomplete';
 export type ComponentStatus = 'online' | 'degraded' | 'offline' | 'disabled';
 export type Timeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
+/** Every timeframe the backend stores, fastest first. Mirrors domain.AllTimeframes. */
+export const TIMEFRAMES: Timeframe[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
+
 export interface Market {
   id: number;
   symbol: string;
@@ -569,6 +572,33 @@ export interface CandleCoverage {
   candles: number;
   from?: string;
   to?: string;
+}
+
+export type ImportStatus = 'idle' | 'running' | 'completed' | 'failed' | 'canceled';
+
+export interface ImportItem {
+  symbol: string;
+  timeframe: string;
+  candles: number;
+  error?: string;
+}
+
+/** One historical download job. Only one runs at a time. */
+export interface ImportProgress {
+  id: string;
+  status: ImportStatus;
+  started_at: string;
+  finished_at?: string;
+  from: string;
+  to: string;
+  symbols: string[];
+  timeframes: string[];
+  total: number;
+  completed: number;
+  current?: string;
+  candles: number;
+  items: ImportItem[];
+  error?: string;
 }
 
 export interface EquityPoint {

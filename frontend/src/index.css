@@ -457,6 +457,19 @@ input[type='checkbox'] {
   }
 }
 
+/* The asset picker of the history import: a bounded, scrolling grid, so a
+   universe of fifty assets cannot push the rest of the form off the screen. */
+.import-assets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 4px 10px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
 /* ---------- Tables ---------- */
 
 .table-wrap {

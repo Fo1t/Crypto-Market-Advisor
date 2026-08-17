@@ -54,6 +54,25 @@ advice turned out to be.
 
 ---
 
+## Screenshots
+
+<div align="center">
+
+![Asset analysis: candles, market regime, the deterministic verdict and its scores](docs/images/market-analysis.png)
+
+*One asset: candles with the detected levels, the market regime, the rules-based verdict with every
+vote that produced it, and the deterministic scores — while the header says the model is offline and
+nothing is invented in its absence.*
+
+![News feed: clustered events with category, importance and sources](docs/images/news-feed.png)
+
+*The news feed: events clustered across sources, each with its category, importance and source count.
+Titles stay in the source language; the interface and the analytics are localised.*
+
+</div>
+
+---
+
 ## Highlights
 
 | | |
@@ -150,6 +169,8 @@ Full reference: **[docs/configuration.md](docs/configuration.md)**.
 |---|---|
 | [docs/configuration.md](docs/configuration.md) | Every environment variable, settings precedence, fees, the local LLM and its context budget. |
 | [docs/architecture.md](docs/architecture.md) | Module layout, the decisions worth knowing, and the REST API. |
+| [docs/data-sources.md](docs/data-sources.md) | Exactly what is asked of Bybit and CoinGecko, endpoint by endpoint: the division of labour, paging and caching, the backfill windows, the manual history import, and what happens when a provider is down. |
+| [docs/algorithms.md](docs/algorithms.md) | A surface-level tour of every algorithm between a candle and an advisory — indicators, patterns, structure, levels, divergences, regime, the vote, the risk engine and the grading. |
 | [docs/strategies.md](docs/strategies.md) | The deterministic policy: strategies, filters, hard vetoes, shipped profiles and the measurements behind the defaults. |
 | [docs/backtesting.md](docs/backtesting.md) | Both backtest modes, execution model, the look-ahead guarantee, and the offline research harness. |
 | [docs/development.md](docs/development.md) | Building, testing, linting, integration tests and database migrations. |

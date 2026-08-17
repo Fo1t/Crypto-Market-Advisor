@@ -3,25 +3,52 @@ import { useTranslation } from 'react-i18next';
 
 import { api } from '../api/client';
 import { LLM_PRESETS, detectPreset, presetById, type LLMPresetId } from '../api/llmPresets';
-import type { Settings } from '../api/types';
+import { TIMEFRAMES, type Settings } from '../api/types';
 import { useApi } from '../hooks/useApi';
 import { AsyncBoundary, Card } from '../components/common';
+import { HistoryImport } from '../components/HistoryImport';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { StrategyEditor } from '../components/StrategyEditor';
 import { setLanguage, type Language } from '../i18n';
 
-const ALL_TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d'];
+const ALL_TIMEFRAMES = TIMEFRAMES;
 
 export function SettingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data, loading, error, reload } = useApi(() => api.settings(), []);
   const [draft, setDraft] = useState<Settings | null>(null);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Whether the user explicitly chose "custom". The preset is otherwise derived
+  // from the endpoint, and "custom" fills nothing in - so without this the
+  // button could never appear selected, because nothing about the form changes
+  // when it is pressed.
+  const [customLLM, setCustomLLM] = useState(false);
 
   useEffect(() => {
-    if (data) setDraft(structuredClone(data));
+    if (!data) return;
+    const fresh = structuredClone(data);
+    // The language in effect is the one the UI is speaking, which the sidebar
+    // switcher can have changed since these settings were saved. Showing the
+    // stored value instead would put the form at odds with the whole screen.
+    fresh.general.language = i18n.language;
+    setDraft(fresh);
+    setCustomLLM(false);
+    // The language is deliberately not a dependency: it is read once per load,
+    // and re-cloning on a language change would discard unsaved edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
+
+  // The sidebar switcher changes the language directly, without going through
+  // this form. The form has to follow it, or the two controls disagree - and
+  // the next save would quietly restore the language the user just left.
+  useEffect(() => {
+    setDraft((prev) =>
+      prev && prev.general.language !== i18n.language
+        ? { ...prev, general: { ...prev.general, language: i18n.language } }
+        : prev,
+    );
+  }, [i18n.language]);
 
   const save = async () => {
     if (!draft) return;
@@ -49,14 +76,24 @@ export function SettingsPage() {
 
   // The selected preset is derived from the endpoint rather than stored, so a
   // configuration edited by hand - or arriving from .env - still shows what it
-  // actually points at.
-  const activePreset = draft ? detectPreset(draft.llm.base_url) : 'custom';
+  // actually points at. An explicit "custom" choice wins over the detection
+  // until the endpoint itself names a known provider again.
+  const detectedPreset = draft ? detectPreset(draft.llm.base_url) : 'custom';
+  const activePreset: LLMPresetId = customLLM ? 'custom' : detectedPreset;
 
   const applyPreset = (id: LLMPresetId) => {
+    setCustomLLM(id === 'custom');
     const values = presetById(id).values;
     // "Custom" fills nothing in: it is the state of having chosen your own
     // endpoint, not a set of values to overwrite the current one with.
     if (Object.keys(values).length > 0) patch('llm', values);
+  };
+
+  // Typing an endpoint that belongs to a known provider is itself a choice of
+  // that provider, so the manual "custom" state steps aside.
+  const setBaseURL = (value: string) => {
+    patch('llm', { base_url: value });
+    if (detectPreset(value) !== 'custom') setCustomLLM(false);
   };
 
   return (
@@ -141,7 +178,7 @@ export function SettingsPage() {
             <div className="grid grid--3">
               <label className="field">
                 <span className="field__label">{t('settings.baseUrl')}</span>
-                <input value={draft.llm.base_url} onChange={(e) => patch('llm', { base_url: e.target.value })} />
+                <input value={draft.llm.base_url} onChange={(e) => setBaseURL(e.target.value)} />
               </label>
               <label className="field">
                 <span className="field__label">{t('settings.model')}</span>
@@ -343,6 +380,10 @@ export function SettingsPage() {
               value={draft.strategies ?? { min_signal: 1, items: [] }}
               onChange={(next) => setDraft((prev) => (prev ? { ...prev, strategies: next } : prev))}
             />
+          </Card>
+
+          <Card title={t('settings.history')} collapsible defaultOpen={false} storageKey="settings.history">
+            <HistoryImport />
           </Card>
 
           <Card title={t('settings.maintenance')} collapsible defaultOpen={false} storageKey="settings.maintenance">

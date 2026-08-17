@@ -8,6 +8,10 @@ The frontend never touches the database and performs no trading maths of its own
 the backend computed and sends user actions back. The backend is the single source of truth for
 analysis, positions and money.
 
+Two companion documents go one level deeper than this one:
+[data-sources.md](data-sources.md) for what is asked of Bybit and CoinGecko endpoint by endpoint,
+and [algorithms.md](algorithms.md) for every algorithm between a candle and an advisory.
+
 ## Layout
 
 ```
@@ -121,6 +125,8 @@ DELETE /api/markets/{symbol}               POST /api/markets/refresh
 GET    /api/markets/{symbol}/analysis
 GET    /api/markets/{symbol}/candles?timeframe=1h&limit=300
 POST   /api/markets/{symbol}/analyze
+GET    /api/markets/import                 POST /api/markets/import
+POST   /api/markets/import/cancel
 
 GET    /api/recommendations                DELETE /api/recommendations
 GET    /api/recommendations/{id}           DELETE /api/recommendations/{id}

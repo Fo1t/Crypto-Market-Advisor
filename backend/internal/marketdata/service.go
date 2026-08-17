@@ -59,6 +59,12 @@ type Service struct {
 	lastSuccess time.Time
 	lastError   string
 	healthy     bool
+
+	// A manual history import is a single long-running job the user watches,
+	// so it is kept apart from the health state it must not disturb.
+	importMu     sync.Mutex
+	importJob    *ImportProgress
+	importCancel context.CancelFunc
 }
 
 // NewService builds the market data service.
@@ -483,9 +489,10 @@ var bybitHistoryWindow = map[domain.Timeframe]time.Duration{
 	domain.TF1d:  10 * 365 * 24 * time.Hour,
 }
 
-// bybitBackfill advances from the stored watermark with one overlap candle.
-// A first run uses a bounded timeframe-specific history window.
-func (s *Service) bybitBackfill(ctx context.Context, asset domain.Asset, tf domain.Timeframe) ([]domain.Candle, error) {
+// klineFetcher resolves which public market actually carries the pair and
+// returns the function that reads its bars. Spot is the primary market; the
+// linear perpetual is used for assets the exchange lists only as a contract.
+func (s *Service) klineFetcher(ctx context.Context, asset domain.Asset) (func(domain.Timeframe, time.Time, time.Time) ([]domain.Candle, error), error) {
 	spotSupported, err := s.bybit.SupportsSpotSymbol(ctx, asset.BybitSymbol)
 	if err != nil {
 		return nil, err
@@ -500,12 +507,22 @@ func (s *Service) bybitBackfill(ctx context.Context, asset domain.Asset, tf doma
 				asset.BybitSymbol, ErrNotTradable)
 		}
 	}
-	fetch := func(from, to time.Time) ([]domain.Candle, error) {
+	return func(tf domain.Timeframe, from, to time.Time) ([]domain.Candle, error) {
 		if spotSupported {
 			return s.bybit.Klines(ctx, asset.BybitSymbol, tf, from, to)
 		}
 		return s.bybit.LinearKlines(ctx, asset.BybitSymbol, tf, from, to)
+	}, nil
+}
+
+// bybitBackfill advances from the stored watermark with one overlap candle.
+// A first run uses a bounded timeframe-specific history window.
+func (s *Service) bybitBackfill(ctx context.Context, asset domain.Asset, tf domain.Timeframe) ([]domain.Candle, error) {
+	fetchTF, err := s.klineFetcher(ctx, asset)
+	if err != nil {
+		return nil, err
 	}
+	fetch := func(from, to time.Time) ([]domain.Candle, error) { return fetchTF(tf, from, to) }
 
 	now := time.Now().UTC()
 	wanted := now.Add(-bybitHistoryWindow[tf])

@@ -87,6 +87,11 @@ func (s *Server) routes() chi.Router {
 			m.Get("/", s.handleListMarkets)
 			m.Post("/", s.handleCreateMarket)
 			m.Post("/refresh", s.handleRefreshUniverse)
+			m.Route("/import", func(im chi.Router) {
+				im.Get("/", s.handleImportStatus)
+				im.Post("/", s.handleStartImport)
+				im.Post("/cancel", s.handleCancelImport)
+			})
 			m.Get("/{symbol}", s.handleGetMarket)
 			m.Patch("/{symbol}", s.handleUpdateMarket)
 			m.Delete("/{symbol}", s.handleDeleteMarket)

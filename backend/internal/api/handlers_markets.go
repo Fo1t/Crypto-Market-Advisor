@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/crypto-market-advisor/advisor/internal/domain"
+	"github.com/crypto-market-advisor/advisor/internal/marketdata"
 	"github.com/crypto-market-advisor/advisor/internal/repository"
 	"github.com/crypto-market-advisor/advisor/internal/scheduler"
 )
@@ -392,6 +394,148 @@ func (s *Server) handleRefreshUniverse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// ImportHistoryRequest asks for an explicit window of candles.
+type ImportHistoryRequest struct {
+	Symbols    []string `json:"symbols"`
+	Timeframes []string `json:"timeframes"`
+	// Either an RFC3339 timestamp or a plain calendar day. The UI sends days,
+	// because a date picker is what the user is actually thinking in.
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+// maxImportSymbols bounds one job. Twenty-five assets across six timeframes is
+// already 150 paged downloads against a rate-limited public API; more than that
+// is a job nobody watches to the end.
+const maxImportSymbols = 25
+
+func (s *Server) handleStartImport(w http.ResponseWriter, r *http.Request) {
+	var req ImportHistoryRequest
+	if err := decodeJSON(r, &req); err != nil {
+		WriteError(w, r, s.log, err)
+		return
+	}
+
+	symbols := uniqueUpper(req.Symbols)
+	if len(symbols) == 0 {
+		WriteError(w, r, s.log, ErrValidation("at least one symbol is required"))
+		return
+	}
+	if len(symbols) > maxImportSymbols {
+		WriteError(w, r, s.log, ErrValidation(fmt.Sprintf("at most %d symbols can be imported at once", maxImportSymbols)))
+		return
+	}
+	timeframes, err := domain.ParseTimeframes(uniqueLower(req.Timeframes))
+	if err != nil {
+		WriteError(w, r, s.log, ErrValidation(err.Error()))
+		return
+	}
+	if len(timeframes) == 0 {
+		WriteError(w, r, s.log, ErrValidation("at least one timeframe is required"))
+		return
+	}
+
+	now := time.Now().UTC()
+	from, err := parseImportTime(req.From, time.Time{})
+	if err != nil {
+		WriteError(w, r, s.log, ErrValidation("from must be a date (2006-01-02) or an RFC3339 timestamp"))
+		return
+	}
+	to, err := parseImportTime(req.To, now)
+	if err != nil {
+		WriteError(w, r, s.log, ErrValidation("to must be a date (2006-01-02) or an RFC3339 timestamp"))
+		return
+	}
+	if from.IsZero() {
+		WriteError(w, r, s.log, ErrValidation("from is required"))
+		return
+	}
+	if to.After(now) {
+		// Asking for the future is not an error, it is simply empty; clamping
+		// keeps the request meaningful instead of rejecting a rounded end date.
+		to = now
+	}
+	if !to.After(from) {
+		WriteError(w, r, s.log, ErrValidation("to must be after from"))
+		return
+	}
+
+	ctx, cancel := contextWithTimeout(r, 30*time.Second)
+	defer cancel()
+
+	assets := make([]domain.Asset, 0, len(symbols))
+	for _, symbol := range symbols {
+		asset, err := s.deps.Repos.Assets.GetBySymbol(ctx, symbol)
+		if err != nil {
+			WriteError(w, r, s.log, notFoundOr(err, "unknown symbol "+symbol))
+			return
+		}
+		assets = append(assets, asset)
+	}
+
+	progress, err := s.deps.Market.StartImport(assets, timeframes, from, to)
+	if err != nil {
+		if errors.Is(err, marketdata.ErrImportRunning) {
+			WriteError(w, r, s.log, ErrConflict("a historical import is already running"))
+			return
+		}
+		WriteError(w, r, s.log, ErrInternal("failed to start the import").WithCause(err))
+		return
+	}
+	WriteJSON(w, http.StatusAccepted, progress)
+}
+
+func (s *Server) handleImportStatus(w http.ResponseWriter, r *http.Request) {
+	WriteJSON(w, http.StatusOK, s.deps.Market.ImportStatus())
+}
+
+func (s *Server) handleCancelImport(w http.ResponseWriter, r *http.Request) {
+	if !s.deps.Market.CancelImport() {
+		WriteError(w, r, s.log, ErrConflict("no import is running"))
+		return
+	}
+	WriteJSON(w, http.StatusOK, s.deps.Market.ImportStatus())
+}
+
+// parseImportTime accepts a calendar day or a full timestamp, and returns the
+// fallback for an empty value.
+func parseImportTime(raw string, fallback time.Time) (time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return fallback, nil
+	}
+	if t, err := time.Parse(time.RFC3339, raw); err == nil {
+		return t.UTC(), nil
+	}
+	t, err := time.Parse("2006-01-02", raw)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return t.UTC(), nil
+}
+
+func uniqueUpper(values []string) []string {
+	return uniqueStrings(values, strings.ToUpper)
+}
+
+func uniqueLower(values []string) []string {
+	return uniqueStrings(values, strings.ToLower)
+}
+
+func uniqueStrings(values []string, normalize func(string) string) []string {
+	seen := make(map[string]bool, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		v := normalize(strings.TrimSpace(value))
+		if v == "" || seen[v] {
+			continue
+		}
+		seen[v] = true
+		out = append(out, v)
+	}
+	return out
 }
 
 func defaultString(v, fallback string) string {

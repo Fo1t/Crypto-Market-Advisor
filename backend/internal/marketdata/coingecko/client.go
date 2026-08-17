@@ -1,16 +1,15 @@
-// Package coingecko implements the CoinGecko market data provider.
+// Package coingecko implements the market metadata provider: capitalisation,
+// its ranking, and therefore the automatic asset universe.
 //
-// Endpoint behaviour verified against the live public API on 2026-08-14:
-//   - /coins/markets                        list + market cap + 24h stats
-//   - /coins/{id}/ohlc?days=1               native 30-minute OHLC (48 points)
-//   - /coins/{id}/ohlc?days=7..30           native 4-hour OHLC
-//   - /coins/{id}/market_chart?days=1       5-minute price/volume samples (288)
-//   - /coins/{id}/market_chart?days=2..90   hourly samples
-//   - /coins/{id}/market_chart?days>90      daily samples
+// Two endpoints are called, both public and both usable without a key:
+//   - /ping             liveness, for the health endpoint
+//   - /coins/markets    list + market cap + rank + 24h stats
 //
-// CoinGecko exposes no native 1m/5m/15m OHLC on the free tier, so the caller
-// reconstructs those timeframes from the sampled series and from live polling.
-// Every candle records how it was produced (see domain.CandleSource).
+// It is deliberately not a candle source. The free tier exposes no native
+// minute-level OHLC, and a series reconstructed from its sampled prices looks
+// real without being real; prices and candles come from the exchange instead,
+// and an asset the exchange does not list is reported as untradable. See
+// docs/data-sources.md for the full division of labour.
 package coingecko
 
 import (
